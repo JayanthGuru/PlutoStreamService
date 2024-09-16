@@ -1,0 +1,12 @@
+replicaCount: 1
+image:
+  repository: postgres
+  tag: latest
+  pullPolicy: IfNotPresent
+postgresql:
+  database: pluto
+  username: jarvis
+service:
+  type: ClusterIP
+  port: 5432
+namespace: pluto

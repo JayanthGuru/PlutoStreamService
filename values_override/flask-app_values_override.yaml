@@ -1,0 +1,9 @@
+replicaCount: 2
+image:
+  repository: your-flask-app-image
+  tag: latest
+  pullPolicy: Always
+service:
+  type: LoadBalancer
+  port: 5000
+namespace: pluto

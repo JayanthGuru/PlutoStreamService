@@ -1,0 +1,36 @@
+project-root/
+├── flask-app/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── models.py
+│   │   ├── routes.py
+│   │   ├── config.py
+│   │   └── templates/
+│   │       └── index.html
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── run.py
+├── postgres/
+│   ├── init.sql
+│   └── Dockerfile
+├── charts/
+│   ├── flask-app/
+│   │   ├── Chart.yaml
+│   │   ├── values.yaml
+│   │   ├── templates/
+│   │   │   ├── deployment.yaml
+│   │   │   └── service.yaml
+│   ├── postgres/
+│   │   ├── Chart.yaml
+│   │   ├── values.yaml
+│   │   ├── templates/
+│   │   │   ├── deployment.yaml
+│   │   │   ├── service.yaml
+│   │   │   └── secret.yaml
+├── values_override/
+│   ├── flask-values.yaml
+│   └── postgres-values.yaml
+├── k8s/
+│   ├── namespace.yaml
+├── .gitignore
+└── README.md

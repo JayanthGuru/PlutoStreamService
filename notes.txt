@@ -1,0 +1,89 @@
+CREATE INDEX idx_metadata_song_name ON metadata_table(song_name);
+CREATE INDEX idx_metadata_artist_id ON metadata_table(artist_id);
+CREATE INDEX idx_metadata_song_id ON metadata_table(song_id);
+
+
+
+
+
+Caching:
+For high-traffic applications, consider caching frequently accessed metadata to further optimize response times.
+
+
+
+
+
+Potential Enhancements
+Metadata Synchronization: Ensure there’s good synchronization between the two databases, especially if you’re inserting or updating songs. You may want to implement a mechanism to handle failover or transactional consistency between PostgreSQL and MongoDB.
+
+Microservices Architecture: You could consider splitting your app into microservices, where each service handles a different part of the architecture (e.g., one service for metadata and another for media storage).
+
+
+
+
+
+
+
+Which is More Optimized?
+The optimal approach depends on the specific context:
+
+Use a Single Query when:
+You need all or most of the data at once (lyrics, song, bgm, etc.).
+You want to minimize the number of round-trips between your application and the database.
+The data set is moderate in size and can fit into memory without performance degradation.
+Use Multiple Queries when:
+You don’t always need all the data (e.g., only metadata or lyrics) and can avoid fetching large song/bgm files unless explicitly needed.
+Some of the data is very large (e.g., audio files or large text lyrics), and you want to optimize memory usage.
+Caching: If you’re caching different pieces of data separately, using separate queries helps minimize the load on the database.
+Hybrid Approach (Best of Both Worlds)
+A possible optimization is a hybrid approach where you:
+
+Fetch the metadata and smaller fields (like song name and lyrics) in a single query.
+Fetch large objects (like the song file or bgm) separately, only when required.
+For example:
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------------------------
+
+kubectl apply -f k8s/namespace.yaml
+
+helm install postgres ./charts/postgres -f values_override/postgres-values.yaml --namespace pluto
+
+helm install flask-app ./charts/flask-app -f values_override/flask-values.yaml --namespace pluto
+
+=======================================================
+
+
+
+HELM installation
+
+(Windows)
+winget install Helm.Helm
+
+
+=======================================================
+
+ENDPOINTS
+
+User Endpoints
+GET /lyrics/<song_name>:     Fetch lyrics for a specific song.
+GET /songs/<song_name>:      Fetch details for a specific song.
+GET /bgms/<song_name>:       Fetch background music for a specific song.
+
+Admin Endpoints
+POST /songs:                 Add a new song, lyrics, or BGM.
+PUT /songs/<song_id>:        Update an existing song, lyrics, or BGM.
+DELETE /songs/<song_id>:     Delete a specific song, lyrics, or BGM.
+
+=======================================================
+

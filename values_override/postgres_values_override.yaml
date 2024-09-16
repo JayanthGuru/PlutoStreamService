@@ -1,0 +1,12 @@
+replicaCount: 2
+image:
+  repository: postgres
+  tag: latest
+  pullPolicy: Always
+postgresql:
+  database: pluto
+  username: jarvis
+service:
+  type: LoadBalancer
+  port: 5432
+namespace: pluto
