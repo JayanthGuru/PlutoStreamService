@@ -1,9 +1,9 @@
 replicaCount: 1
 image:
-  repository: your-flask-app-image
+  repository: jayanthguru/pluto_streaming_service
   tag: latest
   pullPolicy: IfNotPresent
 service:
   type: ClusterIP
   port: 5000
-namespace: pluto
+namespace: pluto   

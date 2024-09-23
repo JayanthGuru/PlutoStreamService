@@ -1,8 +1,190 @@
-CREATE INDEX idx_metadata_song_name ON metadata_table(song_name);
-CREATE INDEX idx_metadata_artist_id ON metadata_table(artist_id);
-CREATE INDEX idx_metadata_song_id ON metadata_table(song_id);
+Points to remember
+1. While inserting if there is exception the application should be ability to go back to its original state.
+2. In case of fetching if the fetching of details fails its ok to send the result partially.
+
+Advancements
+1. lyrics sync with audio.
+
+=============================================================================
+Try these
+1. Using factory methods design
+2. Caching using reddis
+3. Monitoring using promithius
 
 
+Middleware Layer
+Middleware is a software layer that sits between your application and the databases. It abstracts the complexity of interacting with multiple databases, providing a unified interface for your application. Here’s how it works and why it’s beneficial:
+
+Abstraction:
+Middleware can provide a single API for your application to interact with, regardless of the underlying database. This makes your application code cleaner and easier to maintain.
+Separation of Concerns:
+By using middleware, you separate the database interaction logic from your business logic. This makes your application more modular and easier to test.
+Flexibility:
+Middleware can handle different types of databases (e.g., SQL and NoSQL) and manage the connections, queries, and data transformations required for each.
+Example
+Here’s a simple example of a middleware class in Python that interacts with both PostgreSQL and MongoDB:
+
+Python
+
+from sqlalchemy import create_engine
+from pymongo import MongoClient
+
+class DatabaseMiddleware:
+    def __init__(self, pg_uri, mongo_uri):
+        self.pg_engine = create_engine(pg_uri)
+        self.mongo_client = MongoClient(mongo_uri)
+        self.mongo_db = self.mongo_client['media_db']
+
+    def get_user_details(self, user_id):
+        with self.pg_engine.connect() as connection:
+            result = connection.execute(f"SELECT * FROM users WHERE id = {user_id}")
+            user_details = result.fetchone()
+        return user_details
+
+    def get_media_files(self, user_id):
+        media_files = self.mongo_db.media.find({'user_id': user_id})
+        return list(media_files)
+AI-generated code. Review and use carefully. More info on FAQ.
+Caching
+Caching is a technique used to store frequently accessed data in a temporary storage area (cache) to reduce latency and improve performance. Here’s how it works and why it’s beneficial:
+
+Performance:
+By storing frequently accessed data in memory, you can reduce the time it takes to fetch data from the database.
+Reduced Load:
+Caching reduces the load on your databases by serving repeated requests from the cache instead of querying the database each time.
+Scalability:
+Caching helps your application scale better by handling more requests efficiently.
+Example
+Here’s an example using Redis as a caching layer in a Flask application:
+
+Python
+
+from flask import Flask, jsonify
+from redis import Redis
+from sqlalchemy import create_engine
+from pymongo import MongoClient
+
+app = Flask(__name__)
+redis_client = Redis(host='localhost', port=6379)
+
+# PostgreSQL setup
+pg_engine = create_engine('postgresql://user:password@localhost/dbname')
+
+# MongoDB setup
+mongo_client = MongoClient('mongodb://localhost:27017/')
+mongo_db = mongo_client['media_db']
+
+@app.route('/user/<user_id>', methods=['GET'])
+def get_user_details(user_id):
+    # Check cache first
+    cached_user = redis_client.get(f"user:{user_id}")
+    if cached_user:
+        return jsonify(eval(cached_user))
+
+    # Fetch user details from PostgreSQL
+    with pg_engine.connect() as connection:
+        result = connection.execute(f"SELECT * FROM users WHERE id = {user_id}")
+        user_details = result.fetchone()
+
+    # Fetch associated media files from MongoDB
+    media_files = mongo_db.media.find({'user_id': user_id})
+
+    user_data = {
+        'user_details': dict(user_details),
+        'media_files': list(media_files)
+    }
+
+    # Store in cache
+    redis_client.set(f"user:{user_id}", str(user_data))
+
+    return jsonify(user_data)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+AI-generated code. Review and use carefully. More info on FAQ.
+Monitoring and Logging
+Monitoring and logging are essential for tracking the performance and health of your databases and application. Here’s how they work and why they’re beneficial:
+
+Visibility:
+Monitoring provides real-time visibility into the performance and health of your databases and application. This helps you identify and resolve issues quickly.
+Diagnostics:
+Logging captures detailed information about the application’s behavior, which is useful for diagnosing and troubleshooting issues.
+Alerting:
+Monitoring tools can send alerts when certain thresholds are exceeded, allowing you to take proactive measures to prevent downtime or performance degradation.
+Example
+Here’s an example using Prometheus for monitoring and logging in a Flask application:
+
+Python
+
+from flask import Flask, jsonify
+from prometheus_flask_exporter import PrometheusMetrics
+
+app = Flask(__name__)
+metrics = PrometheusMetrics(app)
+
+@app.route('/user/<user_id>', methods=['GET'])
+def get_user_details(user_id):
+    # Your existing logic to fetch user details
+    pass
+
+if __name__ == '__main__':
+    app.run(debug=True)
+AI-generated code. Review and use carefully. More info on FAQ.
+Summary
+Middleware: Abstracts the complexity of interacting with multiple databases, providing a unified interface.
+Caching: Stores frequently accessed data in memory to reduce latency and improve performance.
+Monitoring and Logging: Provides visibility, diagnostics, and alerting to track the performance and health of your databases and application.
+Would you like more details on any specific part of this setup or further assistance with implementing these methods?
+
+================================================================================
+Sample Architecute
+------------------
+
+1. Have a Master/Manager class for DB management which contains methods to establish connection to different DB, execute query and more.
+2. 
+
+=================================================================================
+Metadata table 
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    song_name VARCHAR(255) NOT NULL,
+    album_name VARCHAR(255),
+    release_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Foreign keys to related tables
+    artist_id UUID  REFERENCES artists(id),                     -- FK to the songs table
+    song_id UUID  REFERENCES songs(id) ON DELETE CASCADE,       -- FK to the songs table
+    bgm_id UUID  REFERENCES bgm(id) ON DELETE CASCADE,          -- FK to the bgm table
+    lyrics_id UUID  REFERENCES lyrics(id) ON DELETE CASCADE      -- FK to the lyrics table
+
+
+TABLE lyrics 
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    english_lyrics TEXT,
+    telugu_lyrics TEXT
+
+
+TABLE songs
+     id SERIAL PRIMARY KEY,
+     song BYTEA,  -- The actual song file or URL reference
+     file_format VARCHAR(10)
+
+TABLE bgm
+     id SERIAL PRIMARY KEY,
+     bgm BYTEA,  -- BGM file or URL reference
+     file_format VARCHAR(10)
+
+TABLE artists
+     id SERIAL PRIMARY KEY,
+     artist_name VARCHAR(255) NOT NULL
+
+
+
+-- CREATE INDEX idx_metadata_song_name ON metadata_table(song_name);
+-- CREATE INDEX idx_metadata_artist_id ON metadata_table(artist_id);
+-- CREATE INDEX idx_metadata_song_id ON metadata_table(song_id);
+
+==========================================================================================
 
 
 
@@ -17,9 +199,6 @@ Potential Enhancements
 Metadata Synchronization: Ensure there’s good synchronization between the two databases, especially if you’re inserting or updating songs. You may want to implement a mechanism to handle failover or transactional consistency between PostgreSQL and MongoDB.
 
 Microservices Architecture: You could consider splitting your app into microservices, where each service handles a different part of the architecture (e.g., one service for metadata and another for media storage).
-
-
-
 
 
 
@@ -47,19 +226,13 @@ For example:
 
 
 
-
-
-
-
-
-
 -------------------------------------------------------
 
 kubectl apply -f k8s/namespace.yaml
 
-helm install postgres ./charts/postgres -f values_override/postgres-values.yaml --namespace pluto
+helm install postgres ./charts/postgres -f ./values_override/postgres_values_override.yaml --namespace pluto
 
-helm install flask-app ./charts/flask-app -f values_override/flask-values.yaml --namespace pluto
+helm install flask-app ./charts/flask-app -f ./values_override/flask-app_values_override.yaml --namespace pluto
 
 =======================================================
 
@@ -85,5 +258,58 @@ POST /songs:                 Add a new song, lyrics, or BGM.
 PUT /songs/<song_id>:        Update an existing song, lyrics, or BGM.
 DELETE /songs/<song_id>:     Delete a specific song, lyrics, or BGM.
 
-=======================================================
 
+
+
+
+=======================================================
+DEV PHASE
+
+
+Creating a local repository
+
+docker run -d -p 5000:5000 --name registry registry:2
+========================================================
+
+Then, tag your image and push it to the local registry:
+
+1. Build image locally
+> docker build -t localhost:5000/pluto_streaming_service:v1 .\flask-app\ 
+
+2. push to local repository 
+> docker push localhost:5000/pluto_streaming_service:v1
+
+3. Change it in values_override file of flask-app
+
+4. For delting the image 
+> docker image rm localhost:5000/pluto_streaming_service:v1
+
+
+
+
+
+========================================================
+
+powershell virtualenv
+This error occurs because PowerShell’s execution policy is set to restrict script execution. You can change the execution policy to allow scripts to run. Here’s how you can do it:
+
+Open PowerShell as Administrator:
+Right-click on the Start menu and select Windows PowerShell (Admin).
+Check Current Execution Policy:
+Run the following command to see the current execution policy:
+Get-ExecutionPolicy
+
+Change the Execution Policy:
+To allow local scripts to run, you can set the execution policy to RemoteSigned:
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+If you only want to change the policy for the current session, use:
+Set-ExecutionPolicy Bypass -Scope Process
+
+Run Your Script:
+Now, try running your activation script again:
+.\.venv\Scripts\activate.ps1
+
+
+
+=================================================================================================

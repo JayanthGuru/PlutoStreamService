@@ -1,7 +1,7 @@
 replicaCount: 2
 image:
-  repository: your-flask-app-image
-  tag: latest
+  repository: localhost:5000/pluto_streaming_service
+  tag: v1
   pullPolicy: Always
 service:
   type: LoadBalancer
