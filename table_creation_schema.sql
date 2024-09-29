@@ -1,21 +1,18 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE metadata_table (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+-- Creating the metadata table with a hash-based id (using VARCHAR(64) for SHA-256)
+CREATE TABLE metadata (
+    id VARCHAR(64) PRIMARY KEY, 
     song_name VARCHAR(255) NOT NULL,
     album_name VARCHAR(255),
     release_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     -- Foreign keys to related tables
-    -- artist_id UUID  REFERENCES artists(id),                     -- FK to the songs table
-    -- song_id UUID  REFERENCES songs(id) ON DELETE CASCADE,       -- FK to the songs table
-    -- bgm_id UUID  REFERENCES bgm(id) ON DELETE CASCADE,          -- FK to the bgm table
-    lyrics_id UUID  REFERENCES lyrics(id) ON DELETE CASCADE     -- FK to the lyrics table
+    lyrics_id UUID REFERENCES lyrics(id)    -- FK to the lyrics table
 );
 
-
--- Creating lyrics table
+-- Creating the lyrics table
 CREATE TABLE lyrics (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     english_lyrics TEXT,

@@ -1,31 +1,38 @@
-from flask import Flask, request, jsonify
+# app/routes/__init__.py
+from flask import Blueprint, request
+from app.controllers import get_lyrics
 
-app = Flask(__name__)
+api = Blueprint('api', __name__)
 
-# User Endpoints
-@app.route('/lyrics/<song_name>', methods=['GET'])
-def get_lyrics(song_name):
-    return jsonify({"lyrics": "Lyrics for " + song_name})
+# Public Endpoints
+@api.route('/lyrics/<song_name>', methods=['GET'])
+def lyrics(song_name):
+    return get_lyrics(song_name)
 
-@app.route('/songs/<song_name>', methods=['GET'])
-def get_song(song_name):
-    return jsonify({"song": "Song data for " + song_name})
+@api.route('/songs/<song_name>', methods=['GET'])
+def song(song_name):
+    pass
 
-@app.route('/bgms/<song_name>', methods=['GET'])
-def get_bgm(song_name):
-    return jsonify({"bgm": "BGM data for " + song_name})
+@api.route('/bgms/<song_name>', methods=['GET'])
+def bgm(song_name):
+    pass
+
+@api.route('/<song_name>', methods=['GET'])
+def full_details(song_name):
+    # Implement logic to get full details (metadata, lyrics, etc.)
+    pass
 
 # Admin Endpoints
-@app.route('/songs', methods=['POST'])
-def add_song():
+@api.route('/songs', methods=['POST'])
+def new_song():
     data = request.get_json()
-    return jsonify({"message": "Song added"}), 201
+    pass
 
-@app.route('/songs/<song_id>', methods=['PUT', 'PATCH'])
-def edit_song(song_id):
+@api.route('/songs/<song_id>', methods=['PUT', 'PATCH'])
+def update_song(song_id):
     data = request.get_json()
-    return jsonify({"message": "Song updated"})
+    pass
 
-@app.route('/songs/<song_id>', methods=['DELETE'])
-def delete_song(song_id):
-    return jsonify({"message": "Song deleted"})
+@api.route('/songs/<song_id>', methods=['DELETE'])
+def remove_song(song_id):
+    pass
