@@ -40,9 +40,6 @@ class DataBaseMiddleWare:
             return "Song not found"
         
 
-
-
-
     # Admin specific 
     def insert_row(self, song_name: str, details: dict):
         lyrics = details.get("lyrics") if "lyrics" in details else None
