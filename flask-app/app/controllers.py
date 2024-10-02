@@ -5,6 +5,7 @@ class DataBaseManager:
     def __init__(self):
         self.db_agent = DataBaseAgent()
         self.db_agent._establish_connection_with_db()
+        # self.lyrics_supported_languages = self._get_lyrics_columns
 
     def close_connection(self):
         self.db_agent._close_connection_with_db()
@@ -56,10 +57,10 @@ class DataBaseManager:
         metadata_id = self.get_metdata_id_from_song_name(song_name)
         if lyrics:
             print(f"Adding lyrics for {song_name}, {lyrics}")
-            self._add_lyrics(metadata_id, lyrics)
+            self._add_lyrics(metadata_id, song_name, lyrics)
 
  
-    def _add_lyrics(self, metadata_id:str, lyrics:dict):
+    def _add_lyrics(self, metadata_id:str, song_name:str, lyrics:dict):
 
         # Query to check if the song already exists, and fetch lyrics info dynamically
         pre_check_query = """
@@ -72,43 +73,53 @@ class DataBaseManager:
         print(pre_check_result)
 
         if pre_check_result:
-            id, lyrics_id, *existing_lyrics = pre_check_result[0]
+            # Song entry is present in metadata table.
+            id, lyrics_id = pre_check_result[0].get('id'), pre_check_result[0].get('lyrics_id')
+            existing_lyrics_dict = {k: v for k, v in pre_check_result[0].items() if k not in ['id', 'lyrics_id'] and v != None}
             print(f"id = {id}")
             print(f"lyrics_id {lyrics_id}")
-            print(f"existing_lyrics {existing_lyrics}")
-        else:
-            print("No result")
-            default_result = self.db_agent.execute_query(query="SELECT * FROM METADATA WHERE id = '5184bc4beb07e648f50cb607869c359f60dcbb31b926ec0aac529dac134b097f';")
-            print(default_result)
-        #     if lyrics_id:
-        #         for language, lyric_text in lyrics_details.items():
-        #             existing_lyric = existing_lyrics[self._get_lyrics_column_index(language, pre_check_result[0])]
+            print(f"existing_lyrics {existing_lyrics_dict}")
+            if lyrics_id:
+                update_fields = {}
+                for language, lyric_text in lyrics.items():    
+                    if lyric_text:
+                        if f"{language.lower()}_lyrics" not in existing_lyrics_dict:
+                            update_fields[f"{language.lower()}_lyrics"] = lyric_text
+                        else:
+                            print(f"WARNING lyrics for langauge {language.lower()} is already present in db, Use the update operation for editing the lyrics")
+                if update_fields:
+                    # Generate the SET clause for the query dynamically
+                    set_clause = ", ".join([f"{key} = %s" for key in update_fields.keys()])
+
+                    # Build the final update query
+                    update_query = f"""
+                        UPDATE lyrics
+                        SET {set_clause}
+                        WHERE id = %s
+                    """
                     
-        #             if lyric_text and not existing_lyric:
-        #                 update_fields.append(f"{language.lower()}_lyrics = %s")
-        #                 update_values.append(lyric_text)
-
-        #         if update_fields:
-        #             # Only update if there are NULL columns that need to be filled
-        #             update_query = f"""
-        #                 UPDATE lyrics
-        #                 SET {", ".join(update_fields)}
-        #                 WHERE id = %s
-        #             """
-        #             update_values.append(lyrics_id)
-        #             self.db_agent.execute_query_with_rollback(update_query, update_values)
-        #             return f"Updated missing lyrics for song: {song_name}"
-
-        #         # If all fields are filled, manual intervention is required
-        #         return f"Lyrics already complete for {song_name}. Manual intervention required for updates."
-
-        #     # No lyrics_id exists, insert new lyrics and update metadata
-        #     insert_lyrics_query = self._insert_new_lyrics_and_update_metadata(metadata_id, lyrics)
-        #     return insert_lyrics_query
-        #         # If no record found, insert both new lyrics and update metadata
+                    # The params will include the new lyrics values, followed by the `lyrics_id`
+                    params = list(update_fields.values()) + [lyrics_id]
+                    
+                    # Execute the query
+                    update_result = self.db_agent.execute_query_with_rollback(query=update_query, params=params)
+                    if update_result:
+                        print(f"Added lyrics for song: {song_name} for lanuages {update_result[0].keys()}")
+                    else:
+                        print("TODO: Should send something to UI to notify admin")
+            else:
+                # No record found, insert new lyrics and update metadata
+                print("TODO: No record found, insert new lyrics and update metadata")
+                # insert_lyrics_query = self._insert_new_lyrics_and_update_metadata(metadata_id, lyrics)
+                # return insert_lyrics_query
+        else:
+            insert_lyrics_query = self._insert_new_lyrics_and_update_metadata(None, lyrics, song_name)
+            return insert_lyrics_query
+        
         # else:
-        #     insert_lyrics_query = self._insert_new_lyrics_and_update_metadata(None, lyrics, song_name)
-        #     return insert_lyrics_query
+        #     print("No result")
+        #     default_result = self.db_agent.execute_query(query="SELECT * FROM METADATA WHERE id = '5184bc4beb07e648f50cb607869c359f60dcbb31b926ec0aac529dac134b097f';")
+        #     print(default_result)
 
     # def _insert_new_lyrics_and_update_metadata(self, metadata_id, lyrics, song_name=None):
     #     if lyrics:
@@ -151,12 +162,3 @@ class DataBaseManager:
     #             return f"Inserted new song and lyrics: {song_name}"
 
     #     return "No lyrics provided"
-
-
-    # def _get_lyrics_column_index(self, language, result_row):
-    #     """
-    #     Utility method to get the index of a specific language's lyrics in the result row.
-    #     This is necessary because we dynamically retrieve all columns from the `lyrics` table.
-    #     """
-    #     columns_in_order = ["english_lyrics", "telugu_lyrics"]  # Example of pre-defined order
-    #     return columns_in_order.index(f"{language.lower()}_lyrics")

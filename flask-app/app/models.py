@@ -1,4 +1,5 @@
 import psycopg2
+import traceback
 
 class DataBaseAgent:
 
@@ -7,26 +8,50 @@ class DataBaseAgent:
 
     def _establish_connection_with_db(self):
         self.postgres_conn = psycopg2.connect(self.postgres_uri)
+        self.postgres_conn.autocommit = True
         print("Connected to PostgreSQL")
 
     def execute_query(self, query: str, params=None):
         with self.postgres_conn.cursor() as cursor:
             full_query = cursor.mogrify(query, params).decode('utf-8')
-            print(f"MODEL - got a request to query: {full_query}")
+            print(f"Query being executed is {full_query} --- execute_query")
+            
             cursor.execute(query, params)
+            columns = [desc[0] for desc in cursor.description]            
             result = cursor.fetchall()
-            return result
 
-    def execute_query_with_rollback(self, query: str, data: tuple):
+            result_dicts = [dict(zip(columns, row)) for row in result]
+            
+            return result_dicts
+
+
+    def execute_query_with_rollback(self, query: str, params=None):
+        """
+            work in progress need to handle this logic for update and insert issue is for update there is no result from db.
+        """
+
+        result_dicts = None
         try:
             self.postgres_conn.autocommit = False
             with self.postgres_conn.cursor() as cursor:
-                cursor.execute(query, data)
+                full_query = cursor.mogrify(query, params).decode('utf-8')
+                print(f"Query being executed is {full_query} --- execute_query_with_rollback")
+
+                cursor.execute(query, params)
+                result = cursor.fetchall()
+                print("JARVIS", result)
+                columns = [desc[0] for desc in cursor.description]
+
+                result_dicts = [dict(zip(columns, row)) for row in result]
             self.postgres_conn.commit()
             print("Transaction completed")
         except Exception as e:
             self.postgres_conn.rollback()
             print(f"Transaction failed: {e}")
+            print(traceback.format_exc())
+        finally:
+            self.postgres_conn.autocommit = True
+        return result_dicts
 
     def _close_connection_with_db(self):
         self.postgres_conn.close()
