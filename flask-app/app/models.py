@@ -1,7 +1,6 @@
 import psycopg2
-import hashlib
 
-class DataBaseManager:
+class DataBaseAgent:
 
     def __init__(self):
         self.postgres_uri = "postgresql://postgres:password@localhost:5432/pluto"
@@ -10,9 +9,11 @@ class DataBaseManager:
         self.postgres_conn = psycopg2.connect(self.postgres_uri)
         print("Connected to PostgreSQL")
 
-    def execute_query(self, query: str):
+    def execute_query(self, query: str, params=None):
         with self.postgres_conn.cursor() as cursor:
-            cursor.execute(query)
+            full_query = cursor.mogrify(query, params).decode('utf-8')
+            print(f"MODEL - got a request to query: {full_query}")
+            cursor.execute(query, params)
             result = cursor.fetchall()
             return result
 
